@@ -14,10 +14,7 @@ There's only one example at the moment (`examples/spaceship.html`), but you do g
 
 Usage
 =====
-You can use this camera as a drop-in replacement for a normal THREE.PerspectiveCamera;
-`var camera = new THREE.TargetCamera( fov, aspect, near, far );`
 
-After creating the camera, add a target for the camera to track:
 ```javascript
     
     // The target object to move must be an instance of THREE.Object3D in 
