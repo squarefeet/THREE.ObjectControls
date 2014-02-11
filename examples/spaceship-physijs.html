@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <link rel="stylesheet" type="text/css" href="css/main.css">
+    </head>
+    <body>
+        <p class="instructions">
+            <span>W/A/S/D: Forward/backward/strafe left/strafe right</span>
+            <span>Q/E: Roll left/right</span>
+            <span>R/F: Strafe up/down</span>
+        </p>
+
+        <div class="reticule">
+            <div></div>
+        </div>
+
+        <script type="text/javascript" src="js/vendor/THREE-r65.min.js"></script>
+        <script type="text/javascript" src="js/vendor/ColladaLoader.js"></script>
+        <script type="text/javascript" src="js/vendor/Stats.min.js"></script>
+        <script type="text/javascript" src="js/vendor/THREE.TargetCamera.js"></script>
+        <script type="text/javascript" src="js/vendor/ShaderParticles.min.js"></script>
+        <script type="text/javascript" src="../src/THREE.ObjectControls.js"></script>
+
+        <script type="text/javascript" src="js/vendor/physi.js"></script>
+
+        <script type="text/javascript" src="js/defaultScene.js"></script>
+
+        <script type="text/javascript">
+            function addCubeMap( dae ) {
+                var urls = [
+                        'img/pos-x.png',
+                        'img/neg-x.png',
+                        'img/pos-y.png',
+                        'img/neg-y.png',
+                        'img/pos-z.png',
+                        'img/neg-z.png'
+                    ],
+                    cubemap = THREE.ImageUtils.loadTextureCube(urls),
+                    materials = dae.children[0].children[0].children[2].material.materials,
+                    material = dae.children[0].children[0].children[0].children[0].material;
+
+
+                cubemap.format = THREE.RGBFormat;
+
+                for( var i = 0; i < materials.length; ++i ) {
+                    materials[i].envMap = cubemap;
+                    materials[i].needsUpdate = true;
+                }
+
+                material.envMap = cubemap;
+                material.needsUpdate = true;
+            }
+
+            function createSpaceship() {
+                var loader = new THREE.ColladaLoader();
+                loader.load( 'collada/ship.dae', function( collada ) {
+                    dae = collada.scene;
+
+                    addCubeMap( dae );
+
+                    dae.updateMatrix();
+                    scene.add( dae );
+
+                    // Create a chase camera
+                    camera.addTarget( {
+                        name: 'chase',
+                        targetObject: dae,
+                        cameraPosition: new THREE.Vector3( 0, 10, 20 ),
+                        stiffness: 0.3,
+                        fixed: false
+                    } );
+
+                    camera.setTarget( 'chase' );
+                    scene.add( camera );
+
+                    // Create the controls
+                    controls = new THREE.ObjectControls( {
+                        mousePos: mousePos,
+                        targetObject: dae,
+                        positionalAcceleration: new THREE.Vector3( 3, 10, 10 ),
+                        positionalDeceleration: new THREE.Vector3( 0.8, 0.8, 0.99 ),
+                        maxPositionalVelocity: new THREE.Vector3( 100, 100, 100 )
+                    } );
+
+                    document.addEventListener( 'mousemove', onMouseMove, false );
+                    document.addEventListener( 'keydown', onKeyDown, false );
+                    document.addEventListener( 'keyup', onKeyUp, false );
+
+                    createParticles( dae );
+                    addLights();
+                    addSkybox( dae.position );
+                    animate();
+                } );
+            }
+
+            function createParticles( dae ) {
+                particleGroup = new SPE.Group({
+                    texture: THREE.ImageUtils.loadTexture('./img/smokeparticle.png'),
+                    maxAge: 0.3
+                });
+
+                particleEmitter = new SPE.Emitter({
+                    type: 'cube',
+                    position: dae.position,
+                    positionSpread: new THREE.Vector3(1, 1, 1),
+                    sizeStart: 2,
+                    sizeEnd: 1,
+
+                    colorStart: new THREE.Color( 'white' ),
+                    colorMiddle: new THREE.Color( 'blue' ),
+                    colorEnd: new THREE.Color( 'yellow' ),
+
+                    opacityStart: 0.05,
+                    opacityMiddle: 1,
+                    opacityEnd: 0,
+
+                    particleCount: 1000
+                });
+
+                var starfield = new SPE.Emitter({
+                    positionSpread: new THREE.Vector3( 10000, 10000, 10000 ),
+                    sizeStart: 10,
+
+                    colorStart: new THREE.Color( 'yellow' ),
+                    opacityStart: 1,
+
+                    isStatic: 1,
+
+                    particleCount: 2000
+                })
+
+                particleGroup.addEmitter( particleEmitter );
+                particleGroup.addEmitter( starfield );
+
+                scene.add( particleGroup.mesh );
+            }
+
+
+            function onRender() {
+                var dt = clock.getDelta();
+                stats.update();
+                controls.update( 0.016 );
+                camera.update();
+                particleGroup.tick( dt );
+            }
+
+            function onMouseMove( e ) {
+                var x = e.pageX - (window.innerWidth/2),
+                    y = e.pageY - (window.innerHeight/2),
+                    threshold = 10;
+
+                if( (x > 0 && x < threshold) || (x < 0 && x > -threshold) ) {
+                    x = 0;
+                }
+
+                if( (y > 0 && y < threshold) || (y < 0 && y > -threshold) ) {
+                    y = 0;
+                }
+
+                mousePos.set( x, y );
+            }
+
+            function onKeyDown( e ) {
+                var key = e.keyCode;
+
+                // W
+                if( key === 87 ) {
+                    controls.setForward( true );
+                }
+
+                // S
+                else if( key === 83 ) {
+                    controls.setBackward( true );
+                }
+
+                // Q
+                else if( key === 81 ) {
+                    controls.setRollLeft( true );
+                }
+
+                // E
+                else if( key === 69 ) {
+                    controls.setRollRight( true );
+                }
+
+                // A
+                else if( key === 65 ) {
+                    controls.setLeft( true );
+                }
+
+                // D
+                else if( key === 68 ) {
+                    controls.setRight( true );
+                }
+
+                // R
+                else if( key === 82 ) {
+                    controls.setUp( true );
+                }
+
+                // F
+                else if( key === 70 ) {
+                    controls.setDown( true );
+                }
+            }
+
+            function onKeyUp( e ) {
+                var key = e.keyCode;
+
+                // W
+                if( key === 87 ) {
+                    controls.setForward( false );
+                }
+
+                // S
+                else if( key === 83 ) {
+                    controls.setBackward( false );
+                }
+
+                // Q
+                else if( key === 81 ) {
+                    controls.setRollLeft( false );
+                }
+
+                // E
+                else if( key === 69 ) {
+                    controls.setRollRight( false );
+                }
+
+                // A
+                else if( key === 65 ) {
+                    controls.setLeft( false );
+                }
+
+                // D
+                else if( key === 68 ) {
+                    controls.setRight( false );
+                }
+
+                // R
+                else if( key === 82 ) {
+                    controls.setUp( false );
+                }
+
+                // F
+                else if( key === 70 ) {
+                    controls.setDown( false );
+                }
+            }
+
+
+
+            // Create a target camera instance.
+            var camera = new THREE.TargetCamera( 75, window.innerWidth / window.innerHeight, 0.1, 2000 ),
+                mousePos = new THREE.Vector2(),
+                clock = new THREE.Clock(),
+                dae, controls,
+                particleGroup, particleEmitter;
+
+
+
+            // Setup the scene and renderer stuff ( see `defaultScene.js` )
+            initBasics();
+            createSpaceship();
+        </script>
+    </body>
+</html>

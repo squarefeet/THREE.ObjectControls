@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <link rel="stylesheet" type="text/css" href="css/main.css">
+    </head>
+    <body>
+        <p class="instructions">
+            <span>W/A/S/D: Forward/backward/strafe left/strafe right</span>
+            <span>Q/E: Roll left/right</span>
+            <span>R/F: Strafe up/down</span>
+        </p>
+
+        <div class="reticule">
+            <div></div>
+        </div>
+
+        <script type="text/javascript" src="js/vendor/THREE-r65.min.js"></script>
+        <script type="text/javascript" src="js/vendor/ColladaLoader.js"></script>
+        <script type="text/javascript" src="js/vendor/Stats.min.js"></script>
+        <script type="text/javascript" src="js/vendor/THREE.TargetCamera.js"></script>
+        <script type="text/javascript" src="js/vendor/ShaderParticles.min.js"></script>
+        <script type="text/javascript" src="../src/THREE.ObjectControlsPhysijs.js"></script>
+
+        <script type="text/javascript" src="js/vendor/physi.js"></script>
+
+        <script type="text/javascript" src="js/defaultScenePhysijs.js"></script>
+
+        <script type="text/javascript">
+            function makeCubeMap(  ) {
+                var urls = [
+                        'img/pos-x.png',
+                        'img/neg-x.png',
+                        'img/pos-y.png',
+                        'img/neg-y.png',
+                        'img/pos-z.png',
+                        'img/neg-z.png'
+                    ],
+                    cubemap = THREE.ImageUtils.loadTextureCube(urls);
+                cubemap.format = THREE.RGBFormat;
+
+                return cubemap;
+            }
+
+            function createSpaceship() {
+
+                var boxMaterial = Physijs.createMaterial(
+                    new THREE.MeshPhongMaterial( {
+                        color: 0xffffff,
+                        // envMap: makeCubeMap()
+                    }),
+                    0.8,
+                    0.4
+                );
+
+                var boxMesh = new Physijs.BoxMesh(
+                    new THREE.CubeGeometry( 50, 10, 10 ),
+                    boxMaterial
+                );
+
+
+                console.log( boxMesh );
+                scene.add( boxMesh );
+
+                // Create a chase camera
+                camera.addTarget( {
+                    name: 'chase',
+                    targetObject: boxMesh,
+                    cameraPosition: new THREE.Vector3( 0, 30, 60 ),
+                    stiffness: 0.1,
+                    fixed: false
+                } );
+
+                camera.addTarget( {
+                    name: 'fixed',
+                    targetObject: boxMesh,
+                    cameraPosition: new THREE.Vector3( 0, 20, 100 ),
+                    stiffness: 0.1,
+                    fixed: true
+                } );
+
+                camera.setTarget( 'chase' );
+                scene.add( camera );
+
+                // Create the controls
+                controls = new THREE.ObjectControlsPhysijs( {
+                    mousePos: mousePos,
+                    targetObject: boxMesh,
+                    positionalAcceleration: new THREE.Vector3( 10000, 10000, 10000 ),
+                    positionalDeceleration: new THREE.Vector3( 0.8, 0.8, 0.99 ),
+                    maxPositionalVelocity: new THREE.Vector3( 100000, 100000, 100000 )
+                } );
+
+                document.addEventListener( 'mousemove', onMouseMove, false );
+                document.addEventListener( 'keydown', onKeyDown, false );
+                document.addEventListener( 'keyup', onKeyUp, false );
+
+                addLights();
+                addSkybox( boxMesh.position );
+                animate();
+
+                console.log( scene );
+                scene.simulate();
+            }
+
+
+            function onRender() {
+                var dt = clock.getDelta();
+                stats.update();
+                // controls.update( 0.016 );
+                // camera.update();
+            }
+
+            function onMouseMove( e ) {
+                var x = e.pageX - (window.innerWidth/2),
+                    y = e.pageY - (window.innerHeight/2),
+                    threshold = 10;
+
+                if( (x > 0 && x < threshold) || (x < 0 && x > -threshold) ) {
+                    x = 0;
+                }
+
+                if( (y > 0 && y < threshold) || (y < 0 && y > -threshold) ) {
+                    y = 0;
+                }
+
+                mousePos.set( x, y );
+            }
+
+            function onKeyDown( e ) {
+                var key = e.keyCode;
+
+                // W
+                if( key === 87 ) {
+                    controls.setForward( true );
+                }
+
+                // S
+                else if( key === 83 ) {
+                    controls.setBackward( true );
+                }
+
+                // Q
+                else if( key === 81 ) {
+                    controls.setRollLeft( true );
+                }
+
+                // E
+                else if( key === 69 ) {
+                    controls.setRollRight( true );
+                }
+
+                // A
+                else if( key === 65 ) {
+                    controls.setLeft( true );
+                }
+
+                // D
+                else if( key === 68 ) {
+                    controls.setRight( true );
+                }
+
+                // R
+                else if( key === 82 ) {
+                    controls.setUp( true );
+                }
+
+                // F
+                else if( key === 70 ) {
+                    controls.setDown( true );
+                }
+            }
+
+            function onKeyUp( e ) {
+                var key = e.keyCode;
+
+                // W
+                if( key === 87 ) {
+                    controls.setForward( false );
+                }
+
+                // S
+                else if( key === 83 ) {
+                    controls.setBackward( false );
+                }
+
+                // Q
+                else if( key === 81 ) {
+                    controls.setRollLeft( false );
+                }
+
+                // E
+                else if( key === 69 ) {
+                    controls.setRollRight( false );
+                }
+
+                // A
+                else if( key === 65 ) {
+                    controls.setLeft( false );
+                }
+
+                // D
+                else if( key === 68 ) {
+                    controls.setRight( false );
+                }
+
+                // R
+                else if( key === 82 ) {
+                    controls.setUp( false );
+                }
+
+                // F
+                else if( key === 70 ) {
+                    controls.setDown( false );
+                }
+            }
+
+
+
+            // Create a target camera instance.
+            var camera = new THREE.TargetCamera( 75, window.innerWidth / window.innerHeight, 0.1, 2000 ),
+                mousePos = new THREE.Vector2(),
+                clock = new THREE.Clock(),
+                dae, controls,
+                particleGroup, particleEmitter;
+
+
+
+            // Setup the scene and renderer stuff ( see `defaultScene.js` )
+            initBasics();
+            createSpaceship();
+        </script>
+    </body>
+</html>
