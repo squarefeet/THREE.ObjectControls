@@ -129,7 +129,7 @@ If you don't have grunt installed, first make sure you've got [NodeJS](http://no
 
 Now you can install the local grunt package
 
-`cd chaseCamera`
+`cd [projectDirectory]`
 
 `npm install`
 
